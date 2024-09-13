@@ -4,21 +4,28 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NeonRacer Enhanced</title>
+    <title>Tetris Game</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="mainMenu" class="menu">
-        <h1>NeonRacer</h1>
-        <button onclick="startGame()">Start Game</button>
+    <div class="game-container">
+        <h1>Tetris</h1>
+        <div class="score-container">
+            <p>Score: <span id="score">0</span></p>
+            <p>Lines: <span id="lines">0</span></p>
+            <p>Level: <span id="level">1</span></p>
+        </div>
+        <canvas id="tetris" width="240" height="400"></canvas>
+
+        <!-- Mobile Controls -->
+        <div class="controls">
+            <button id="left" class="control-button">⬅️</button>
+            <button id="rotate" class="control-button">🔄</button>
+            <button id="right" class="control-button">➡️</button>
+            <button id="down" class="control-button">⬇️</button>
+        </div>
     </div>
-    <canvas id="gameCanvas" style="display: none;"></canvas>
-    <div id="gameOverScreen" class="menu" style="display: none;">
-        <h1>Game Over</h1>
-        <p id="finalScore"></p>
-        <button onclick="restartGame()">Restart</button>
-        <button onclick="showMainMenu()">Main Menu</button>
-    </div>
+
     <script src="script.js"></script>
 </body>
 </html>

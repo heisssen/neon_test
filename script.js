@@ -1,315 +1,276 @@
-// Canvas setup
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-canvas.width = 800;
-canvas.height = 600;
+const canvas = document.getElementById('tetris');
+const context = canvas.getContext('2d');
 
-// Asset loading
-const carImage = new Image();
-carImage.src = 'assets/car.png';
+context.scale(20, 20);  // Scale the canvas for better visibility
 
-const obstacleImage = new Image();
-obstacleImage.src = 'assets/obstacle.png';
+// Load sound effects
+const sounds = {
+    move: new Audio('sounds/move.mp3'),
+    rotate: new Audio('sounds/rotate.mp3'),
+    drop: new Audio('sounds/drop.mp3'),
+};
 
-const boostImage = new Image();
-boostImage.src = 'assets/boost.png';
-
-const roadImage = new Image();
-roadImage.src = 'assets/road.png';
-
-const nitroSound = new Audio('assets/nitro.mp3');
-const backgroundMusic = new Audio('assets/background-music.mp3');
-backgroundMusic.loop = true;
-
-// Game variables
-let car = { ...initializeCar() };
-let obstacles = [];
-let speedBoosts = [];
-let score = 0;
-let level = 1;
-let gameSpeed = 5;
-let isNitroActive = false;
-let gamePaused = false;
-let gameRunning = false;
-
-// Main menu and game over handling
-function startGame() {
-    document.getElementById('mainMenu').style.display = 'none';
-    canvas.style.display = 'block';
-    resetGame();
-    backgroundMusic.play();
-    gameLoop();
+// Create the game arena (grid)
+function createMatrix(width, height) {
+    const matrix = [];
+    while (height--) {
+        matrix.push(new Array(width).fill(0));
+    }
+    return matrix;
 }
 
-function showMainMenu() {
-    document.getElementById('mainMenu').style.display = 'flex';
-    document.getElementById('gameOverScreen').style.display = 'none';
-    canvas.style.display = 'none';
-    backgroundMusic.pause();
-    backgroundMusic.currentTime = 0;
-}
-
-function restartGame() {
-    document.getElementById('gameOverScreen').style.display = 'none';
-    canvas.style.display = 'block';
-    resetGame();
-    gameLoop();
-}
-
-function resetGame() {
-    car = { ...initializeCar() };
-    obstacles = [];
-    speedBoosts = [];
-    score = 0;
-    level = 1;
-    gameSpeed = 5;
-    isNitroActive = false;
-    gamePaused = false;
-    gameRunning = true;
-}
-
-// Car initialization
-function initializeCar() {
-    return {
-        x: canvas.width / 2 - 25,
-        y: canvas.height - 150,
-        width: 50,
-        height: 100,
-        speed: 5,
-        maxSpeed: 12,
-        nitroSpeed: 20,
-        dx: 0,
-        dy: 0,
-        health: 100
-    };
-}
-
-// Event listeners for controls
-document.addEventListener('keydown', keyDown);
-document.addEventListener('keyup', keyUp);
-
-function keyDown(e) {
-    if (!gameRunning) return;
-
-    switch (e.key) {
-        case 'ArrowRight':
-        case 'd':
-            car.dx = car.speed;
-            break;
-        case 'ArrowLeft':
-        case 'a':
-            car.dx = -car.speed;
-            break;
-        case 'ArrowUp':
-        case 'w':
-            car.dy = -car.speed;
-            break;
-        case 'ArrowDown':
-        case 's':
-            car.dy = car.speed;
-            break;
-        case ' ':
-            activateNitro();
-            break;
-        case 'Escape':
-            togglePause();
-            break;
+// Create tetromino pieces
+function createPiece(type) {
+    switch (type) {
+        case 'T': return [[0, 0, 0], [5, 5, 5], [0, 5, 0]];
+        case 'O': return [[7, 7], [7, 7]];
+        case 'L': return [[0, 6, 0], [0, 6, 0], [0, 6, 6]];
+        case 'J': return [[0, 4, 0], [0, 4, 0], [4, 4, 0]];
+        case 'I': return [[0, 3, 0, 0], [0, 3, 0, 0], [0, 3, 0, 0], [0, 3, 0, 0]];
+        case 'S': return [[0, 2, 2], [2, 2, 0], [0, 0, 0]];
+        case 'Z': return [[1, 1, 0], [0, 1, 1], [0, 0, 0]];
     }
 }
 
-function keyUp(e) {
-    if (!gameRunning) return;
-
-    if (['ArrowRight', 'd', 'ArrowLeft', 'a', 'ArrowUp', 'w', 'ArrowDown', 's'].includes(e.key)) {
-        car.dx = 0;
-        car.dy = 0;
-    }
+// Draw the game state with enhanced graphics
+function draw() {
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    drawMatrix(arena, { x: 0, y: 0 });
+    drawMatrix(player.matrix, player.pos);
 }
 
-// Toggle pause
-function togglePause() {
-    gamePaused = !gamePaused;
-    if (!gamePaused) {
-        gameLoop();
-    } else {
-        displayPauseScreen();
-    }
-}
-
-// Display pause screen
-function displayPauseScreen() {
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#fff';
-    ctx.font = '40px Arial';
-    ctx.fillText('Game Paused', canvas.width / 2 - 120, canvas.height / 2);
-}
-
-// Draw functions
-function drawCar() {
-    ctx.drawImage(carImage, car.x, car.y, car.width, car.height);
-}
-
-function drawObstacles() {
-    obstacles.forEach(obstacle => {
-        ctx.drawImage(obstacleImage, obstacle.x, obstacle.y, obstacle.width, obstacle.height);
-        obstacle.y += gameSpeed;
-
-        if (isColliding(car, obstacle)) {
-            handleCollision();
-        }
+// Draw a matrix on the canvas with shadow and glow effects
+function drawMatrix(matrix, offset) {
+    matrix.forEach((row, y) => {
+        row.forEach((value, x) => {
+            if (value !== 0) {
+                context.fillStyle = colors[value];
+                context.shadowBlur = 10;
+                context.shadowColor = colors[value];
+                context.fillRect(x + offset.x, y + offset.y, 1, 1);
+                context.shadowBlur = 0;  // Reset shadow
+            }
+        });
     });
-
-    obstacles = obstacles.filter(obstacle => obstacle.y < canvas.height);
-}
-
-function drawSpeedBoosts() {
-    speedBoosts.forEach(boost => {
-        ctx.drawImage(boostImage, boost.x, boost.y, boost.width, boost.height);
-        boost.y += gameSpeed;
-
-        if (isColliding(car, boost)) {
-            collectSpeedBoost();
-            boost.collected = true;
-        }
-    });
-
-    speedBoosts = speedBoosts.filter(boost => boost.y < canvas.height && !boost.collected);
-}
-
-let roadOffset = 0;
-function drawRoad() {
-    roadOffset += gameSpeed / 2;
-    if (roadOffset > canvas.height) roadOffset = 0;
-
-    ctx.drawImage(roadImage, 0, roadOffset - canvas.height, canvas.width, canvas.height);
-    ctx.drawImage(roadImage, 0, roadOffset, canvas.width, canvas.height);
 }
 
 // Collision detection
-function isColliding(a, b) {
-    return a.x < b.x + b.width &&
-           a.x + a.width > b.x &&
-           a.y < b.y + b.height &&
-           a.y + a.height > b.y;
-}
-
-// Handle collision
-function handleCollision() {
-    car.health -= 20;
-    if (car.health <= 0) {
-        gameOver();
+function collide(arena, player) {
+    const [matrix, offset] = [player.matrix, player.pos];
+    for (let y = 0; y < matrix.length; ++y) {
+        for (let x = 0; x < matrix[y].length; ++x) {
+            if (matrix[y][x] !== 0 && (arena[y + offset.y] && arena[y + offset.y][x + offset.x]) !== 0) {
+                return true;
+            }
+        }
     }
+    return false;
 }
 
-// Collect speed boost
-function collectSpeedBoost() {
-    car.speed = car.maxSpeed;
-    setTimeout(() => {
-        car.speed = 5;
-    }, 3000);
-}
-
-// Activate nitro boost
-function activateNitro() {
-    if (!isNitroActive) {
-        isNitroActive = true;
-        nitroSound.play();
-        car.speed = car.nitroSpeed;
-        setTimeout(() => {
-            car.speed = 5;
-            isNitroActive = false;
-        }, 2000);
-    }
-}
-
-// Generate obstacles
-function generateObstacles() {
-    if (Math.random() < 0.05) {
-        obstacles.push({
-            x: Math.random() * (canvas.width - 50),
-            y: -100,
-            width: 50,
-            height: 100,
+// Merge the player's piece into the game arena
+function merge(arena, player) {
+    player.matrix.forEach((row, y) => {
+        row.forEach((value, x) => {
+            if (value !== 0) {
+                arena[y + player.pos.y][x + player.pos.x] = value;
+            }
         });
+    });
+}
+
+// Reset the player's piece
+function playerReset() {
+    const pieces = 'ILJOTSZ';
+    player.matrix = createPiece(pieces[Math.floor(Math.random() * pieces.length)]);
+    player.pos.y = 0;
+    player.pos.x = (Math.floor(arena[0].length / 2)) - (Math.floor(player.matrix[0].length / 2));
+
+    if (collide(arena, player)) {
+        arena.forEach(row => row.fill(0));  // Reset the game if the piece collides at the top
+        player.score = 0;
+        player.lines = 0;
+        player.level = 1;
+        dropInterval = 1000; // Reset speed
+        updateScore();
     }
 }
 
-// Generate speed boosts
-function generateSpeedBoosts() {
-    if (Math.random() < 0.01) {
-        speedBoosts.push({
-            x: Math.random() * (canvas.width - 30),
-            y: -30,
-            width: 30,
-            height: 30,
-            collected: false,
-        });
+// Handle the piece drop
+function playerDrop() {
+    player.pos.y++;
+    if (collide(arena, player)) {
+        player.pos.y--;
+        merge(arena, player);
+        playerReset();
+        arenaSweep();
+        updateScore();
+        checkLevelUp();
+        addRandomObstacle();  // Occasionally add obstacles
+    }
+    dropCounter = 0;
+    playSound('drop');
+}
+
+// Move the player's piece left or right
+function playerMove(dir) {
+    player.pos.x += dir;
+    if (collide(arena, player)) {
+        player.pos.x -= dir;
+    } else {
+        playSound('move');
     }
 }
 
-// Clear canvas
-function clear() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+// Rotate the player's piece
+function playerRotate(dir) {
+    const pos = player.pos.x;
+    let offset = 1;
+    rotate(player.matrix, dir);
+    while (collide(arena, player)) {
+        player.pos.x += offset;
+        offset = -(offset + (offset > 0 ? 1 : -1));
+        if (offset > player.matrix[0].length) {
+            rotate(player.matrix, -dir);
+            player.pos.x = pos;
+            return;
+        }
+    }
+    playSound('rotate');
 }
 
-// Update game objects
-function update() {
-    car.x += car.dx;
-    car.y += car.dy;
-
-    if (car.x < 0) car.x = 0;
-    if (car.x + car.width > canvas.width) car.x = canvas.width - car.width;
-    if (car.y < 0) car.y = 0;
-    if (car.y + car.height > canvas.height) car.y = canvas.height - car.height;
-
-    score += 1;
-    if (score % 1000 === 0) {
-        levelUp();
+// Rotate the matrix for piece rotation
+function rotate(matrix, dir) {
+    for (let y = 0; y < matrix.length; ++y) {
+        for (let x = 0; x < y; ++x) {
+            [matrix[x][y], matrix[y][x]] = [matrix[y][x], matrix[x][y]];
+        }
     }
 
-    generateObstacles();
-    generateSpeedBoosts();
-
-    clear();
-    drawRoad();
-    drawCar();
-    drawObstacles();
-    drawSpeedBoosts();
-
-    displayGameStats();
-}
-
-// Level up
-function levelUp() {
-    level += 1;
-    gameSpeed += 1;
-}
-
-// Display game stats
-function displayGameStats() {
-    ctx.fillStyle = '#fff';
-    ctx.font = '20px Arial';
-    ctx.fillText(`Score: ${score}`, 10, 30);
-    ctx.fillText(`Speed: ${car.speed}`, 10, 60);
-    ctx.fillText(`Health: ${car.health}`, 10, 90);
-    ctx.fillText(`Level: ${level}`, 10, 120);
-}
-
-// Handle game over
-function gameOver() {
-    gameRunning = false;
-    document.getElementById('finalScore').textContent = `Your final score is ${score}`;
-    document.getElementById('gameOverScreen').style.display = 'flex';
-    canvas.style.display = 'none';
-    backgroundMusic.pause();
-}
-
-// Game loop
-function gameLoop() {
-    if (!gamePaused && gameRunning) {
-        update();
-        requestAnimationFrame(gameLoop);
+    if (dir > 0) {
+        matrix.forEach(row => row.reverse());
+    } else {
+        matrix.reverse();
     }
 }
 
+// Clear filled rows and update the score
+function arenaSweep() {
+    let rowCount = 1;
+    outer: for (let y = arena.length - 1; y > 0; --y) {
+        for (let x = 0; x < arena[y].length; ++x) {
+            if (arena[y][x] === 0) {
+                continue outer;
+            }
+        }
+
+        const row = arena.splice(y, 1)[0].fill(0);
+        arena.unshift(row);
+        ++y;
+
+        player.score += rowCount * 10;
+        player.lines++;
+        rowCount *= 2;
+    }
+}
+
+// Check if the player has cleared enough lines to level up
+function checkLevelUp() {
+    if (player.lines >= player.level * 10) {  // Level up every 10 lines
+        player.level++;
+        dropInterval *= 0.9;  // Increase the speed by 10%
+        updateLevel();
+    }
+}
+
+// Occasionally add random obstacles to the grid
+function addRandomObstacle() {
+    if (Math.random() < 0.1) {  // 10% chance to add an obstacle after each piece placement
+        const y = Math.floor(Math.random() * 5);  // Place near the top
+        const x = Math.floor(Math.random() * arena[0].length);
+        if (arena[y][x] === 0) {  // Only place if space is empty
+            arena[y][x] = Math.floor(Math.random() * 7) + 1;  // Random color
+        }
+    }
+}
+
+// Update the score, lines, and level display
+function updateScore() {
+    document.getElementById('score').innerText = player.score;
+    document.getElementById('lines').innerText = player.lines;
+    document.getElementById('level').innerText = player.level;
+}
+
+// Play sound effects
+function playSound(action) {
+    if (sounds[action]) {
+        sounds[action].currentTime = 0;
+        sounds[action].play();
+    }
+}
+
+// Main game loop
+let dropCounter = 0;
+let dropInterval = 1000;
+
+let lastTime = 0;
+
+function update(time = 0) {
+    const deltaTime = time - lastTime;
+    lastTime = time;
+
+    dropCounter += deltaTime;
+    if (dropCounter > dropInterval) {
+        playerDrop();
+    }
+
+    draw();
+    requestAnimationFrame(update);
+}
+
+// Event listeners for desktop controls
+document.addEventListener('keydown', event => {
+    if (event.key === 'ArrowLeft') {
+        playerMove(-1);
+    } else if (event.key === 'ArrowRight') {
+        playerMove(1);
+    } else if (event.key === 'ArrowDown') {
+        playerDrop();
+    } else if (event.key === 'q') {
+        playerRotate(-1);
+    } else if (event.key === 'w') {
+        playerRotate(1);
+    }
+});
+
+// Mobile controls
+document.getElementById('left').addEventListener('click', () => playerMove(-1));
+document.getElementById('right').addEventListener('click', () => playerMove(1));
+document.getElementById('down').addEventListener('click', () => playerDrop());
+document.getElementById('rotate').addEventListener('click', () => playerRotate(1));
+
+// Colors for tetrominoes
+const colors = [
+    null,
+    '#FF0D72',
+    '#0DC2FF',
+    '#0DFF72',
+    '#F538FF',
+    '#FF8E0D',
+    '#FFE138',
+    '#3877FF',
+];
+
+// Initialize the game arena and player state
+const arena = createMatrix(12, 20);
+const player = {
+    pos: { x: 0, y: 0 },
+    matrix: null,
+    score: 0,
+    lines: 0,
+    level: 1
+};
+
+// Initialize the game state
+playerReset();
+updateScore();
+update();  // Start the game loop
