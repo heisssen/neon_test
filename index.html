@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeonRacer Enhanced</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="mainMenu" class="menu">
+        <h1>NeonRacer</h1>
+        <button onclick="startGame()">Start Game</button>
+    </div>
+    <canvas id="gameCanvas" style="display: none;"></canvas>
+    <div id="gameOverScreen" class="menu" style="display: none;">
+        <h1>Game Over</h1>
+        <p id="finalScore"></p>
+        <button onclick="restartGame()">Restart</button>
+        <button onclick="showMainMenu()">Main Menu</button>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
