@@ -8,7 +8,11 @@ const sounds = {
     move: new Audio('sounds/move.mp3'),
     rotate: new Audio('sounds/rotate.mp3'),
     drop: new Audio('sounds/drop.mp3'),
+    clear: new Audio('sounds/clear.mp3'),
 };
+
+// Game state management
+let isPaused = false;
 
 // Create the game arena (grid)
 function createMatrix(width, height) {
@@ -32,6 +36,42 @@ function createPiece(type) {
     }
 }
 
+// Create a gradient for a tetromino block
+function createGradient(type) {
+    const gradient = context.createLinearGradient(0, 0, 1, 1);
+    switch (type) {
+        case 1: // Z block
+            gradient.addColorStop(0, '#FF0D72');
+            gradient.addColorStop(1, '#F538FF');
+            break;
+        case 2: // S block
+            gradient.addColorStop(0, '#0DC2FF');
+            gradient.addColorStop(1, '#3877FF');
+            break;
+        case 3: // I block
+            gradient.addColorStop(0, '#0DFF72');
+            gradient.addColorStop(1, '#24F05E');
+            break;
+        case 4: // J block
+            gradient.addColorStop(0, '#F538FF');
+            gradient.addColorStop(1, '#FF8E0D');
+            break;
+        case 5: // T block
+            gradient.addColorStop(0, '#FF8E0D');
+            gradient.addColorStop(1, '#FFE138');
+            break;
+        case 6: // L block
+            gradient.addColorStop(0, '#FFE138');
+            gradient.addColorStop(1, '#FFD700');
+            break;
+        case 7: // O block
+            gradient.addColorStop(0, '#3877FF');
+            gradient.addColorStop(1, '#0DC2FF');
+            break;
+    }
+    return gradient;
+}
+
 // Draw the game state with enhanced graphics
 function draw() {
     context.clearRect(0, 0, canvas.width, canvas.height);
@@ -39,16 +79,18 @@ function draw() {
     drawMatrix(player.matrix, player.pos);
 }
 
-// Draw a matrix on the canvas with shadow and glow effects
+// Draw a matrix on the canvas with shadow and gradient effects
 function drawMatrix(matrix, offset) {
     matrix.forEach((row, y) => {
         row.forEach((value, x) => {
             if (value !== 0) {
-                context.fillStyle = colors[value];
-                context.shadowBlur = 10;
-                context.shadowColor = colors[value];
+                context.fillStyle = createGradient(value);  // Use the gradient for the tetromino type
+                context.strokeStyle = '#000';
+                context.lineWidth = 0.05;
                 context.fillRect(x + offset.x, y + offset.y, 1, 1);
-                context.shadowBlur = 0;  // Reset shadow
+                context.strokeRect(x + offset.x, y + offset.y, 1, 1); // Draw border
+                context.shadowColor = 'rgba(0, 0, 0, 0.5)';
+                context.shadowBlur = 5;
             }
         });
     });
@@ -104,8 +146,7 @@ function playerDrop() {
         playerReset();
         arenaSweep();
         updateScore();
-        checkLevelUp();
-        addRandomObstacle();  // Occasionally add obstacles
+        checkSpeedIncrease();
     }
     dropCounter = 0;
     playSound('drop');
@@ -170,6 +211,7 @@ function arenaSweep() {
         player.score += rowCount * 10;
         player.lines++;
         rowCount *= 2;
+        playSound('clear');  // Play clear sound on line removal
     }
 }
 
@@ -182,15 +224,21 @@ function checkLevelUp() {
     }
 }
 
-// Occasionally add random obstacles to the grid
-function addRandomObstacle() {
-    if (Math.random() < 0.1) {  // 10% chance to add an obstacle after each piece placement
-        const y = Math.floor(Math.random() * 5);  // Place near the top
-        const x = Math.floor(Math.random() * arena[0].length);
-        if (arena[y][x] === 0) {  // Only place if space is empty
-            arena[y][x] = Math.floor(Math.random() * 7) + 1;  // Random color
-        }
+// Increase speed based on score
+function checkSpeedIncrease() {
+    if (player.score >= player.level * 100) {  // Increase speed every 100 points
+        dropInterval *= 0.9;
+        displaySpeedIncrease();
     }
+}
+
+// Display speed increase notification
+function displaySpeedIncrease() {
+    const notification = document.createElement('div');
+    notification.className = 'notification';
+    notification.innerText = 'Speed Increased!';
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 2000);
 }
 
 // Update the score, lines, and level display
@@ -208,6 +256,26 @@ function playSound(action) {
     }
 }
 
+// Toggle pause state
+function togglePause() {
+    isPaused = !isPaused;
+    document.getElementById('pause').textContent = isPaused ? '▶️ Resume' : '⏸️ Pause';
+    if (!isPaused) {
+        update();  // Continue the game loop if resumed
+    }
+}
+
+// Restart the game
+function restartGame() {
+    playerReset();
+    updateScore();
+    dropCounter = 0;
+    dropInterval = 1000;
+    isPaused = false;
+    document.getElementById('pause').textContent = '⏸️ Pause';
+    update();
+}
+
 // Main game loop
 let dropCounter = 0;
 let dropInterval = 1000;
@@ -215,6 +283,8 @@ let dropInterval = 1000;
 let lastTime = 0;
 
 function update(time = 0) {
+    if (isPaused) return;  // Stop updating if the game is paused
+
     const deltaTime = time - lastTime;
     lastTime = time;
 
@@ -239,6 +309,8 @@ document.addEventListener('keydown', event => {
         playerRotate(-1);
     } else if (event.key === 'w') {
         playerRotate(1);
+    } else if (event.key === 'Escape') {
+        togglePause();
     }
 });
 
@@ -248,17 +320,9 @@ document.getElementById('right').addEventListener('click', () => playerMove(1));
 document.getElementById('down').addEventListener('click', () => playerDrop());
 document.getElementById('rotate').addEventListener('click', () => playerRotate(1));
 
-// Colors for tetrominoes
-const colors = [
-    null,
-    '#FF0D72',
-    '#0DC2FF',
-    '#0DFF72',
-    '#F538FF',
-    '#FF8E0D',
-    '#FFE138',
-    '#3877FF',
-];
+// Game management controls
+document.getElementById('pause').addEventListener('click', togglePause);
+document.getElementById('restart').addEventListener('click', restartGame);
 
 // Initialize the game arena and player state
 const arena = createMatrix(12, 20);
