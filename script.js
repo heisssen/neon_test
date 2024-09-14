@@ -165,8 +165,8 @@ function playerMove(dir) {
 // Rotate the player's piece
 function playerRotate(dir) {
     const pos = player.pos.x;
-    let offset = 1;
     rotate(player.matrix, dir);
+    let offset = 1;
     while (collide(arena, player)) {
         player.pos.x += offset;
         offset = -(offset + (offset > 0 ? 1 : -1));
@@ -299,15 +299,13 @@ function update(time = 0) {
 
 // Event listeners for desktop controls
 document.addEventListener('keydown', event => {
-    if (event.key === 'ArrowLeft') {
+    if (event.key === 'ArrowLeft' || event.key.toLowerCase() === 'a') {
         playerMove(-1);
-    } else if (event.key === 'ArrowRight') {
+    } else if (event.key === 'ArrowRight' || event.key.toLowerCase() === 'd') {
         playerMove(1);
-    } else if (event.key === 'ArrowDown') {
+    } else if (event.key === 'ArrowDown' || event.key.toLowerCase() === 's') {
         playerDrop();
-    } else if (event.key === 'q') {
-        playerRotate(-1);
-    } else if (event.key === 'w') {
+    } else if (event.key.toLowerCase() === 'q') {
         playerRotate(1);
     } else if (event.key === 'Escape') {
         togglePause();

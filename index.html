@@ -7,29 +7,46 @@
     <title>Tetris Game</title>
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
-    <div class="game-container">
-        <h1>Tetris</h1>
-        <div class="score-container">
-            <p>Score: <span id="score">0</span></p>
-            <p>Lines: <span id="lines">0</span></p>
-            <p>Level: <span id="level">1</span></p>
-        </div>
-        <canvas id="tetris" width="240" height="400"></canvas>
+<body class="bg-dark text-light">
+    <div class="game-wrapper">
+        <div class="game-container">
+            <header>
+                <h1 class="text-neon">Tetris</h1>
+                <div class="score-container">
+                    <p><strong>Score:</strong> <span id="score">0</span></p>
+                    <p><strong>Lines:</strong> <span id="lines">0</span></p>
+                    <p><strong>Level:</strong> <span id="level">1</span></p>
+                </div>
+            </header>
 
-        <!-- Mobile Controls -->
-        <div class="controls">
-            <button id="left" class="control-button">⬅️</button>
-            <button id="rotate" class="control-button">🔄</button>
-            <button id="right" class="control-button">➡️</button>
-            <button id="down" class="control-button">⬇️</button>
+            <main>
+                <canvas id="tetris" width="240" height="400"></canvas>
+            </main>
+
+            <div class="controls">
+                <button id="left" class="btn-neon">⬅️</button>
+                <button id="rotate" class="btn-neon">🔄</button>
+                <button id="right" class="btn-neon">➡️</button>
+                <button id="down" class="btn-neon">⬇️</button>
+            </div>
+
+            <div class="game-controls">
+                <button id="pause" class="btn-outline-neon">⏸️ Pause</button>
+                <button id="restart" class="btn-outline-neon">🔄 Restart</button>
+            </div>
         </div>
 
-        <!-- Game Management -->
-        <div class="game-controls">
-            <button id="pause" class="game-button">⏸️ Pause</button>
-            <button id="restart" class="game-button">🔄 Restart</button>
-        </div>
+        <!-- Tutorial Panel -->
+        <aside class="tutorial">
+            <h2 class="text-neon">How to Play</h2>
+            <ul>
+                <li><strong>⬅️ / A:</strong> Move Left</li>
+                <li><strong>➡️ / D:</strong> Move Right</li>
+                <li><strong>⬇️ / S:</strong> Soft Drop</li>
+                <li><strong>🔄 Q:</strong> Rotate</li>
+                <li><strong>⏸️ Esc:</strong> Pause/Resume</li>
+            </ul>
+        </aside>
     </div>
 
     <script src="script.js"></script>
